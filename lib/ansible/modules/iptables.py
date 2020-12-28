@@ -220,6 +220,13 @@ options:
         This is only valid if the rule also specifies one of the following
         protocols: tcp, udp, dccp or sctp."
     type: str
+  destination_ports:
+    description:
+      - This specifies multiple destination port numbers or port ranges to match in the multiport module.
+      - It can only be used in conjunction with the protocols tcp, udp, udplite, dccp and sctp.
+    type: list
+    elements: str
+    version_added: "2.11"
   to_ports:
     description:
       - This specifies a destination port or range of ports to use, without
@@ -268,8 +275,8 @@ options:
     type: str
   ctstate:
     description:
-      - C(ctstate) is a list of the connection states to match in the conntrack module.
-      - Possible states are C(INVALID), C(NEW), C(ESTABLISHED), C(RELATED), C(UNTRACKED), C(SNAT), C(DNAT)
+      - A list of the connection states to match in the conntrack module.
+      - Possible values are C(INVALID), C(NEW), C(ESTABLISHED), C(RELATED), C(UNTRACKED), C(SNAT), C(DNAT).
     type: list
     elements: str
     default: []
@@ -310,7 +317,7 @@ options:
   reject_with:
     description:
       - 'Specifies the error packet type to return while rejecting. It implies
-        "jump: REJECT"'
+        "jump: REJECT".'
     type: str
     version_added: "2.1"
   icmp_type:
@@ -326,6 +333,7 @@ options:
       - If no chain is specified then the entire table is purged.
       - Ignores all other parameters.
     type: bool
+    default: false
     version_added: "2.2"
   policy:
     description:
@@ -346,14 +354,14 @@ options:
 
 EXAMPLES = r'''
 - name: Block specific IP
-  iptables:
+  ansible.builtin.iptables:
     chain: INPUT
     source: 8.8.8.8
     jump: DROP
   become: yes
 
 - name: Forward port 80 to 8600
-  iptables:
+  ansible.builtin.iptables:
     table: nat
     chain: PREROUTING
     in_interface: eth0
@@ -366,14 +374,14 @@ EXAMPLES = r'''
   become: yes
 
 - name: Allow related and established connections
-  iptables:
+  ansible.builtin.iptables:
     chain: INPUT
     ctstate: ESTABLISHED,RELATED
     jump: ACCEPT
   become: yes
 
 - name: Allow new incoming SYN packets on TCP port 22 (SSH)
-  iptables:
+  ansible.builtin.iptables:
     chain: INPUT
     protocol: tcp
     destination_port: 22
@@ -383,14 +391,14 @@ EXAMPLES = r'''
     comment: Accept new SSH connections.
 
 - name: Match on IP ranges
-  iptables:
+  ansible.builtin.iptables:
     chain: FORWARD
     src_range: 192.168.1.100-192.168.1.199
     dst_range: 10.0.0.1-10.0.0.50
     jump: ACCEPT
 
 - name: Tag all outbound tcp packets with DSCP mark 8
-  iptables:
+  ansible.builtin.iptables:
     chain: OUTPUT
     jump: DSCP
     table: mangle
@@ -398,7 +406,7 @@ EXAMPLES = r'''
     protocol: tcp
 
 - name: Tag all outbound tcp packets with DSCP DiffServ class CS1
-  iptables:
+  ansible.builtin.iptables:
     chain: OUTPUT
     jump: DSCP
     table: mangle
@@ -406,7 +414,7 @@ EXAMPLES = r'''
     protocol: tcp
 
 - name: Insert a rule on line 5
-  iptables:
+  ansible.builtin.iptables:
     chain: INPUT
     protocol: tcp
     destination_port: 8080
@@ -415,19 +423,19 @@ EXAMPLES = r'''
     rule_num: 5
 
 - name: Set the policy for the INPUT chain to DROP
-  iptables:
+  ansible.builtin.iptables:
     chain: INPUT
     policy: DROP
 
 - name: Reject tcp with tcp-reset
-  iptables:
+  ansible.builtin.iptables:
     chain: INPUT
     protocol: tcp
     reject_with: tcp-reset
     ip_version: ipv4
 
 - name: Set tcp flags
-  iptables:
+  ansible.builtin.iptables:
     chain: OUTPUT
     jump: DROP
     protocol: tcp
@@ -440,20 +448,20 @@ EXAMPLES = r'''
         - FIN
 
 - name: Iptables flush filter
-  iptables:
+  ansible.builtin.iptables:
     chain: "{{ item }}"
     flush: yes
   with_items:  [ 'INPUT', 'FORWARD', 'OUTPUT' ]
 
 - name: Iptables flush nat
-  iptables:
+  ansible.builtin.iptables:
     table: nat
     chain: '{{ item }}'
     flush: yes
   with_items: [ 'INPUT', 'OUTPUT', 'PREROUTING', 'POSTROUTING' ]
 
 - name: Log packets arriving into an user-defined chain
-  iptables:
+  ansible.builtin.iptables:
     chain: LOGGING
     action: append
     state: present
@@ -461,6 +469,16 @@ EXAMPLES = r'''
     limit_burst: 20
     log_prefix: "IPTABLES:INFO: "
     log_level: info
+
+- name: Allow connections on multiple ports
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_ports:
+      - "80"
+      - "443"
+      - "8081:8083"
+    jump: ACCEPT
 '''
 
 import re
@@ -544,6 +562,8 @@ def construct_rule(params):
     append_param(rule, params['log_prefix'], '--log-prefix', False)
     append_param(rule, params['log_level'], '--log-level', False)
     append_param(rule, params['to_destination'], '--to-destination', False)
+    append_match(rule, params['destination_ports'], 'multiport')
+    append_csv(rule, params['destination_ports'], '--dports')
     append_param(rule, params['to_source'], '--to-source', False)
     append_param(rule, params['goto'], '-g', False)
     append_param(rule, params['in_interface'], '-i', False)
@@ -693,6 +713,7 @@ def main():
             set_counters=dict(type='str'),
             source_port=dict(type='str'),
             destination_port=dict(type='str'),
+            destination_ports=dict(type='list', elements='str', default=[]),
             to_ports=dict(type='str'),
             set_dscp_mark=dict(type='str'),
             set_dscp_mark_class=dict(type='str'),
