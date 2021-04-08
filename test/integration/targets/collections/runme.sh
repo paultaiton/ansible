@@ -6,7 +6,7 @@ export ANSIBLE_COLLECTIONS_PATH=$PWD/collection_root_user:$PWD/collection_root_s
 export ANSIBLE_GATHERING=explicit
 export ANSIBLE_GATHER_SUBSET=minimal
 export ANSIBLE_HOST_PATTERN_MISMATCH=error
-export ANSIBLE_COLLECTIONS_ON_ANSIBLE_VERSION_MISMATCH=0
+unset ANSIBLE_COLLECTIONS_ON_ANSIBLE_VERSION_MISMATCH
 
 # FUTURE: just use INVENTORY_PATH as-is once ansible-test sets the right dir
 ipath=../../$(basename "${INVENTORY_PATH:-../../inventory}")
@@ -100,6 +100,9 @@ fi
 
 # test collection inventories
 ansible-playbook inventory_test.yml -i a.statichost.yml -i redirected.statichost.yml "$@"
+
+# test plugin loader redirect_list
+ansible-playbook test_redirect_list.yml -v "$@"
 
 # test adjacent with --playbook-dir
 export ANSIBLE_COLLECTIONS_PATH=''

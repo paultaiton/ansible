@@ -4,7 +4,7 @@
 Using filters to manipulate data
 ********************************
 
-Filters let you transform JSON data into YAML data, split a URL to extract the hostname, get the SHA1 hash of a string, add or multiply integers, and much more. You can use the Ansible-specific filters documented here to manipulate your data, or use any of the standard filters shipped with Jinja2 - see the list of :ref:`built-in filters <jinja2:builtin-filters>` in the official Jinja2 template documentation. You can also use :ref:`Python methods <jinja2:python-methods>` to transform data. You can :ref:`create custom Ansible filters as plugins <developing_filter_plugins>`, though we generally welcome new filters into the ansible-base repo so everyone can use them.
+Filters let you transform JSON data into YAML data, split a URL to extract the hostname, get the SHA1 hash of a string, add or multiply integers, and much more. You can use the Ansible-specific filters documented here to manipulate your data, or use any of the standard filters shipped with Jinja2 - see the list of :ref:`built-in filters <jinja2:builtin-filters>` in the official Jinja2 template documentation. You can also use :ref:`Python methods <jinja2:python-methods>` to transform data. You can :ref:`create custom Ansible filters as plugins <developing_filter_plugins>`, though we generally welcome new filters into the ansible-core repo so everyone can use them.
 
 Because templating happens on the Ansible controller, **not** on the target host, filters execute on the controller and transform data locally.
 
@@ -682,7 +682,7 @@ To select a single element or a data subset from a complex data structure in JSO
 	This filter has migrated to the `community.general <https://galaxy.ansible.com/community/general>`_ collection. Follow the installation instructions to install that collection.
 
 
-.. note:: This filter is built upon **jmespath**, and you can use the same syntax. For examples, see `jmespath examples <http://jmespath.org/examples.html>`_.
+.. note:: You must manually install the **jmespath** dependency on the Ansible controller before using this filter. This filter is built upon **jmespath**, and you can use the same syntax. For examples, see `jmespath examples <http://jmespath.org/examples.html>`_.
 
 Consider this data structure::
 
@@ -1405,6 +1405,14 @@ which produces this output:
     # host: myhost
     #
 
+URLEncode Variables
+-------------------
+
+The ``urlencode`` filter quotes data for use in a URL path or query using UTF-8::
+
+    {{ 'Trollhättan' | urlencode }}
+    # => 'Trollh%C3%A4ttan'
+
 Splitting URLs
 --------------
 
@@ -1612,6 +1620,12 @@ To concatenate a list into a string::
 
     {{ list | join(" ") }}
 
+To split a sting into a list::
+
+.. versionadded:: 2.11
+
+    {{ csv_string | split(",") }}
+
 To work with Base64 encoded strings::
 
     {{ encoded | b64decode }}
@@ -1660,6 +1674,8 @@ To get a date object from a string use the `to_datetime` filter::
 
     # get amount of days between two dates. This returns only number of days and discards remaining hours, minutes, and seconds
     {{ (("2016-08-14 20:00:12" | to_datetime) - ("2015-12-25" | to_datetime('%Y-%m-%d'))).days  }}
+
+.. note:: For a full list of format codes for working with python date format strings, see https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior.
 
 .. versionadded:: 2.4
 

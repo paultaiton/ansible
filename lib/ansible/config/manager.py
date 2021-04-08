@@ -329,7 +329,10 @@ class ConfigManager(object):
         ftype = get_config_type(cfile)
         if cfile is not None:
             if ftype == 'ini':
-                self._parsers[cfile] = configparser.ConfigParser()
+                kwargs = {}
+                if PY3:
+                    kwargs['inline_comment_prefixes'] = (';',)
+                self._parsers[cfile] = configparser.ConfigParser(**kwargs)
                 with open(to_bytes(cfile), 'rb') as f:
                     try:
                         cfg_text = to_text(f.read(), errors='surrogate_or_strict')
@@ -384,7 +387,7 @@ class ConfigManager(object):
 
         return ret
 
-    def get_configuration_definitions(self, plugin_type=None, name=None):
+    def get_configuration_definitions(self, plugin_type=None, name=None, ignore_private=False):
         ''' just list the possible settings, either base or for specific plugins or plugin '''
 
         ret = {}
@@ -394,6 +397,11 @@ class ConfigManager(object):
             ret = self._plugins.get(plugin_type, {})
         else:
             ret = self._plugins.get(plugin_type, {}).get(name, {})
+
+        if ignore_private:
+            for cdef in list(ret.keys()):
+                if cdef.startswith('_'):
+                    del ret[cdef]
 
         return ret
 
@@ -483,6 +491,12 @@ class ConfigManager(object):
                     if value is not None:
                         origin = 'keyword: %s' % keyword
 
+                if value is None and 'cli' in defs[config]:
+                    # avoid circular import .. until valid
+                    from ansible import context
+                    value, origin = self._loop_entries(context.CLIARGS, defs[config]['cli'])
+                    origin = 'cli: %s' % origin
+
                 # env vars are next precedence
                 if value is None and defs[config].get('env'):
                     value, origin = self._loop_entries(py3compat.environ, defs[config]['env'])
@@ -535,6 +549,12 @@ class ConfigManager(object):
                 else:
                     raise AnsibleOptionsError('Invalid type for configuration option %s: %s' %
                                               (to_native(_get_entry(plugin_type, plugin_name, config)), to_native(e)))
+
+            # deal with restricted values
+            if value is not None and 'choices' in defs[config] and defs[config]['choices'] is not None:
+                if value not in defs[config]['choices']:
+                    raise AnsibleOptionsError('Invalid value "%s" for configuration option "%s", valid values are: %s' %
+                                              (value, to_native(_get_entry(plugin_type, plugin_name, config)), defs[config]['choices']))
 
             # deal with deprecation of the setting
             if 'deprecated' in defs[config] and origin != 'default':

@@ -719,10 +719,31 @@ def test_fqcr_parsing_valid(ref, ref_type, expected_collection,
 
 
 @pytest.mark.parametrize(
+    ('fqcn', 'expected'),
+    (
+        ('ns1.coll2', True),
+        ('ns1#coll2', False),
+        ('def.coll3', False),
+        ('ns4.return', False),
+        ('assert.this', False),
+        ('import.that', False),
+        ('.that', False),
+        ('this.', False),
+        ('.', False),
+        ('', False),
+    ),
+)
+def test_fqcn_validation(fqcn, expected):
+    """Vefiry that is_valid_collection_name validates FQCN correctly."""
+    assert AnsibleCollectionRef.is_valid_collection_name(fqcn) is expected
+
+
+@pytest.mark.parametrize(
     'ref,ref_type,expected_error_type,expected_error_expression',
     [
         ('no_dots_at_all_action', 'action', ValueError, 'is not a valid collection reference'),
         ('no_nscoll.myaction', 'action', ValueError, 'is not a valid collection reference'),
+        ('no_nscoll%myaction', 'action', ValueError, 'is not a valid collection reference'),
         ('ns.coll.myaction', 'bogus', ValueError, 'invalid collection ref_type'),
     ])
 def test_fqcr_parsing_invalid(ref, ref_type, expected_error_type, expected_error_expression):

@@ -94,6 +94,13 @@ There are several ways to do it in Ansible, this is just one example:
     }
 
 
+.. code-block:: YAML+Jinja
+ :caption: Get the unique list of values of a variable that vary per host
+
+    vars:
+        unique_value_list: "{{ groups['all'] | map ('extract', hostvars, 'varname') | list | unique}}"
+
+
 .. _find_mount_point:
 
 Find mount point
@@ -115,6 +122,7 @@ In this case, we want to find the mount point for a given path across our machin
         msg: "{{(ansible_facts.mounts | selectattr('mount', 'in', path) | list | sort(attribute='mount'))[-1]['mount']}}"
 
 
+.. _omit_elements_from_list:
 
 Omit elements from a list
 -------------------------
@@ -150,6 +158,30 @@ Another way is to avoid adding elements to the list in the first place, so you c
           - "foo"
           - "bar"
 
+
+
+.. _combine_optional_values:
+
+Combine values from same list of dicts
+---------------------------------------
+Combining positive and negative filters from examples above, you can get a 'value when it exists' and a 'fallback' when it doesn't.
+
+.. code-block:: YAML+Jinja
+ :caption: Use selectattr and rejectattr to get the ansible_host or inventory_hostname as needed
+
+    - hosts: localhost
+      tasks:
+        - name: Check hosts in inventory that respond to ssh port
+          wait_for:
+            host: "{{ item }}"
+            port: 22
+          loop: '{{ has_ah + no_ah }}'
+          vars:
+            has_ah: '{{ hostvars|dictsort|selectattr("1.ansible_host", "defined")|map(attribute="1.ansible_host")|list }}'
+            no_ah: '{{ hostvars|dictsort|rejectattr("1.ansible_host", "defined")|map(attribute="0")|list }}'
+
+
+.. _custom_fileglob_variable:
 
 Custom Fileglob Based on a Variable
 -----------------------------------
@@ -198,7 +230,7 @@ These example produces ``{"a": "b", "c": "d"}``
 
   vars:
       single_list: [ 'a', 'b', 'c', 'd' ]
-      mydict: "{{ dict(single_list) | slice(2) | list }}"
+      mydict: "{{ dict(single_list | slice(2) | list) }}"
 
 
 .. code-block:: YAML+Jinja

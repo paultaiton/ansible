@@ -226,7 +226,7 @@ To install a specific version of a role from Galaxy, append a comma and the valu
 
 .. code-block:: bash
 
-   $ ansible-galaxy install geerlingguy.apache,v1.0.0
+   $ ansible-galaxy install geerlingguy.apache,1.0.0
 
 It is also possible to point directly to the git repository and specify a branch name or commit hash as the version. For example, the following will
 install a specific commit:
@@ -270,8 +270,8 @@ Use the following example as a guide for specifying roles in *requirements.yml*:
     # from galaxy
     - name: yatesr.timezone
 
-    # from locally cloned git repository (file:// requires full paths)
-    - src: file:///home/bennojoy/nginx
+    # from locally cloned git repository (git+file:// requires full paths)
+    - src: git+file:///home/bennojoy/nginx
 
     # from GitHub
     - src: https://github.com/bennojoy/nginx
@@ -306,7 +306,7 @@ Use the following example as a guide for specifying roles in *requirements.yml*:
       scm: hg
 
     # from GitLab or other git-based scm, using git+ssh
-    - src: git@gitlab.company.com:mygroup/ansible-base.git
+    - src: git@gitlab.company.com:mygroup/ansible-core.git
       scm: git
       version: "0.1"  # quoted, so YAML doesn't parse this as a floating-point value
 
@@ -381,7 +381,7 @@ There are two ways to define the dependencies of a role:
 Using ``meta/requirements.yml``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-`.. versionadded:: 2.10`
+.. versionadded:: 2.10
 
 You can create the file ``meta/requirements.yml`` and define dependencies in the same format used for :file:`requirements.yml` described in the `Installing multiple roles from a file`_ section.
 
